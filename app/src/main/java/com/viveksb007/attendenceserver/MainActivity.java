@@ -57,7 +57,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.button:
                 turnOnWifiHotspot();
                 startServer();
-                while (getIpAddress().equals("")){}
+                while (getIpAddress().equals("")) {
+                }
                 tvIPinfo.setText(getIpAddress());
                 break;
             case R.id.button2:
@@ -142,6 +143,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private class SocketServerThread extends Thread {
         static final int SOCKET_SERVER_PORT = 8080;
+
         @Override
         public void run() {
             Socket socket = null;
@@ -164,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
                     messageFromClient = dataInputStream.readUTF();
-                    macAddresses += messageFromClient;
+                    macAddresses = macAddresses + messageFromClient + "\n";
 
                     final String finalMacAddressess = macAddresses;
                     MainActivity.this.runOnUiThread(new Runnable() {
@@ -174,9 +176,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     });
 
-                    if(messageFromClient == null){
+                    if ((messageFromClient == null) | (messageFromClient == "")) {
                         dataOutputStream.writeUTF("404");
-                    }else{
+                    } else {
                         dataOutputStream.writeUTF("200");
                     }
                 }
