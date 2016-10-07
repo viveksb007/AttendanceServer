@@ -7,31 +7,37 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Enumeration;
+
+// Default IP = 192.168.43.1  Default Port = 8080
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private final String TAG = getClass().getSimpleName();
     public WifiManager mWifiManager;
     Button startHotspot, stopHotspot;
-    TextView tvIPinfo, socketInfo, clientInfo;
+    TextView clientInfo, ipInfo;
     ServerSocket serverSocket;
-    String msg = "", messageFromClient = "";
+    String messageFromClient = "";
+    ArrayList<String> deviceID_LIST;
+    ArrayAdapter adapter;
+    ListView clientList;
     Thread socketServerThread;
 
     @Override
@@ -40,9 +46,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         startHotspot = (Button) findViewById(R.id.button);
         stopHotspot = (Button) findViewById(R.id.button2);
-        tvIPinfo = (TextView) findViewById(R.id.tvIPinfo);
-        socketInfo = (TextView) findViewById(R.id.tvSocketInfo);
+
         clientInfo = (TextView) findViewById(R.id.tvClientInfo);
+        ipInfo = (TextView) findViewById(R.id.tv_ipinfo);
+        clientList = (ListView) findViewById(R.id.lv_client_list);
+
+        deviceID_LIST = new ArrayList<>();
+        adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, deviceID_LIST);
+        clientList.setAdapter(adapter);
 
         startHotspot.setOnClickListener(this);
         stopHotspot.setOnClickListener(this);
@@ -59,12 +70,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 startServer();
                 while (getIpAddress().equals("")) {
                 }
-                tvIPinfo.setText(getIpAddress());
+                ipInfo.setText(getIpAddress());
                 break;
             case R.id.button2:
                 stopServer();
                 turnOffWifiHotspot();
-                tvIPinfo.setText("");
                 break;
         }
     }
@@ -149,16 +159,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Socket socket = null;
             DataInputStream dataInputStream = null;
             DataOutputStream dataOutputStream = null;
-            String macAddresses = "";
+
             try {
                 serverSocket = new ServerSocket(SOCKET_SERVER_PORT);
-
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        socketInfo.setText("I am Waiting @ " + serverSocket.getLocalPort());
-                    }
-                });
 
                 while (true) {
                     socket = serverSocket.accept();
@@ -166,21 +169,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
                     messageFromClient = dataInputStream.readUTF();
-                    macAddresses = macAddresses + messageFromClient + "\n";
 
-                    final String finalMacAddressess = macAddresses;
+                    if (messageFromClient.equals("")) {
+                        dataOutputStream.writeUTF("404");
+                    } else {
+                        boolean found = false;
+                        for (int i = 0; i < deviceID_LIST.size(); i++) {
+                            if (deviceID_LIST.get(i).equals(messageFromClient)) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found)
+                            dataOutputStream.writeUTF("420");
+                        else {
+                            deviceID_LIST.add(messageFromClient);
+                            dataOutputStream.writeUTF("200");
+                        }
+                    }
+
                     MainActivity.this.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            clientInfo.setText(finalMacAddressess);
+                            adapter.notifyDataSetChanged();
+                            Toast.makeText(MainActivity.this, String.valueOf(deviceID_LIST.size()), Toast.LENGTH_SHORT).show();
                         }
                     });
 
-                    if ((messageFromClient == null) | (messageFromClient == "")) {
-                        dataOutputStream.writeUTF("404");
-                    } else {
-                        dataOutputStream.writeUTF("200");
-                    }
+
                 }
 
             } catch (IOException e) {
@@ -214,7 +230,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-
     private String getIpAddress() {
         String ip = "";
         try {
@@ -244,6 +259,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         return ip;
     }
-
 
 }
