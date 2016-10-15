@@ -6,6 +6,8 @@ import android.net.wifi.WifiManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -34,8 +36,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     Button startHotspot, stopHotspot;
     TextView clientInfo, ipInfo;
     ServerSocket serverSocket;
-    String messageFromClient = "";
+    String messageFromClient = "", rollNo = "";
     ArrayList<String> deviceID_LIST;
+    ArrayList<String> rollNoList;
     ArrayAdapter adapter;
     ListView clientList;
     Thread socketServerThread;
@@ -52,7 +55,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         clientList = (ListView) findViewById(R.id.lv_client_list);
 
         deviceID_LIST = new ArrayList<>();
-        adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, deviceID_LIST);
+        rollNoList = new ArrayList<>();
+        adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, rollNoList);
         clientList.setAdapter(adapter);
 
         startHotspot.setOnClickListener(this);
@@ -149,6 +153,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 e.printStackTrace();
             }
         }
+        turnOffWifiHotspot();
     }
 
     private class SocketServerThread extends Thread {
@@ -169,6 +174,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
                     messageFromClient = dataInputStream.readUTF();
+                    rollNo = dataInputStream.readUTF();
 
                     if (messageFromClient.equals("")) {
                         dataOutputStream.writeUTF("404");
@@ -184,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             dataOutputStream.writeUTF("420");
                         else {
                             deviceID_LIST.add(messageFromClient);
+                            rollNoList.add(rollNo);
                             dataOutputStream.writeUTF("200");
                         }
                     }
@@ -258,6 +265,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         return ip;
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.about:
+                android.support.v4.app.DialogFragment aboutDialog = new About();
+                aboutDialog.show(getSupportFragmentManager(), "ATServer");
+        }
+        return super.onOptionsItemSelected(item);
     }
 
 }
